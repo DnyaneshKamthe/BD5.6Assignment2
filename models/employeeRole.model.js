@@ -1,4 +1,6 @@
 const { DataTypes, sequelize } = require("../lib/index.js");
+const { employee } = require("./employee.model.js")
+const { role } = require("./role.model.js")
 
 const employeeRole = sequelize.define("employeeRole",{
     employeeId : {
