@@ -220,7 +220,7 @@ app.get("/employees/sort-by-name", async(req, res) => {
     }
 })
 
-app.post("employees/new", async(req, res)=>{
+app.post("/employees/new", async(req, res)=>{
   try {
     let { name, email , departmentId, roleId } = req.body;
     // Validate input data
@@ -243,7 +243,7 @@ app.post("employees/new", async(req, res)=>{
       roleId : roleId
     })
 
-    const createdEmployee = await getEmployeeDetails(newEmployee.id);
+    const createdEmployee = await getEmployeeDetails(newEmployee);
     return res.status(200).json({employee : createdEmployee})
 
   } catch (error) {
@@ -251,6 +251,74 @@ app.post("employees/new", async(req, res)=>{
   }
 })
 
+
+app.post("/employees/update/:id", async(req, res) => {
+  try {
+    let employeeId = req.params.id;
+    let employeeData = await employee.findOne({where : { id : employeeId}});
+    if(!employeeData){
+      return res.status(400).json({message : "No employee found with this id"});
+    }
+    let { name, email, departmentId, roleId } = req.body;
+    
+    let updatedEmployee = {};
+    if(name) updatedEmployee.name = name;
+    if(email) updatedEmployee.email = email;
+    
+    await employee.update(updatedEmployee, { where : { id : employeeId }})
+
+    if (departmentId) {
+      await employeeDepartment.destroy({
+        where: {
+          employeeId: parseInt(employeeData.id),
+        },
+      });
+      await employeeDepartment.create({
+        employeeId: employeeData.id,
+        departmentId,
+      });
+    }
+
+    if (roleId) {
+      await employeeRole.destroy({
+        where: {
+          employeeId: parseInt(employeeData.id),
+        },
+      });
+      await employeeRole.create({
+        employeeId: employeeData.id,
+        roleId,
+      });
+    }
+    let updatedEmployeeData = await getEmployeeDetails(employeeData);
+    res.status(200).json({employee : updatedEmployeeData})
+
+  } catch (error) {
+    res.status(500).json({message: error.message})
+  }
+})
+
+app.post("/employees/delete", async(req, res) => {
+  try {
+    
+    let employeeData = await employee.findOne({where : { id : req.body.id}});
+    
+    if(!employeeData){
+      return res.status(400).json({message : "No employee found with this id"});
+    }
+    // delete employee
+    await employee.destroy({where : {id : req.body.id}})
+
+    //delete employeeDepartment Data
+    await employeeDepartment.destroy({where : {employeeId : req.body.id}});
+    //delete employeeRole data
+    await employeeRole.destroy({where : {employeeId : req.body.id}})
+
+    res.status(200).json({message : `Employee with ID ${req.body.id} has been deleted.`})
+  } catch (error) {
+    return res.status(500).json({message: error.message})
+  }
+})
 
 
 app.get("/", (req, res) => {
